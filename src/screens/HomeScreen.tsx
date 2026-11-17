@@ -1,54 +1,37 @@
 /**
  * Pantalla principal de la aplicación que muestra el listado de recordatorios 
- * de medicación guardados localmente, permitiendo agregar nuevos elementos, 
+ * de medicación guardados mediante Zustand, permitiendo agregar nuevos elementos, 
  * eliminar existentes y cerrar la sesión actual del usuario.
  */
 
-import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useCallback } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, FlatList } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
-import MedicationItem, { Medication } from '../components/MedicationItem';
+import MedicationItem from '../components/MedicationItem';
+import { useAuthStore } from '../stores/authStore';
+import { useMedicationStore } from '../stores/medicationStore';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+export default function HomeScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const medications = useMedicationStore((state) => state.medications);
+  const loadMedications = useMedicationStore((state) => state.loadMedications);
+  const deleteMedication = useMedicationStore((state) => state.deleteMedication);
+  const logout = useAuthStore((state) => state.logout);
 
-export default function HomeScreen({ navigation }: Props) {
-  const [medications, setMedications] = useState<Medication[]>([]);
-
-  // Cargar medicamentos cada vez que la pantalla recibe el foco (ej: al volver de AltaMedication)
   useFocusEffect(
     useCallback(() => {
       loadMedications();
-    }, [])
+    }, [loadMedications])
   );
 
-  const loadMedications = async () => {
-    try {
-      const storedMeds = await AsyncStorage.getItem('medications_list');
-      if (storedMeds) {
-        setMedications(JSON.parse(storedMeds));
-      } else {
-        setMedications([]);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'No se pudieron cargar los recordatorios.');
-    }
-  };
-
   const handleDeleteMedication = async (id: string) => {
-    try {
-      const updatedList = medications.filter((item) => item.id !== id);
-      setMedications(updatedList);
-      await AsyncStorage.setItem('medications_list', JSON.stringify(updatedList));
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo eliminar el elemento.');
-    }
+    await deleteMedication(id);
   };
 
   const handleLogout = async () => {
-    await AsyncStorage.setItem('is_logged_in', 'false');
+    await logout();
     navigation.replace('Login');
   };
 

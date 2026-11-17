@@ -3,32 +3,39 @@
  * Verifica renderizado de los elementos visuales de la pantalla de login, 
  * la interacción con los campos de texto, 
  * la simulación de eventos táctiles y 
- * su comportamiento asíncrono con AsyncStorage.
+ * su integración con el store de autenticación (useAuthStore).
  */
 
 import React from "react";
 import { render, fireEvent, screen, waitFor } from "@testing-library/react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoginScreen from "../LoginScreen";
+import { useAuthStore } from "../../stores/authStore";
 
-// MOCK DE ASYNCSTORAGE: 
-jest.mock("@react-native-async-storage/async-storage", () =>
-  require("@react-native-async-storage/async-storage/jest/async-storage-mock")
-);
+// Mock del store de Zustand
+jest.mock("../../stores/authStore", () => ({
+  useAuthStore: jest.fn(),
+}));
 
-// Mock de la navegación de Stack para evitar errores de contexto de React Navigation
+// Mock de la navegación de Stack
 const mockNavigate = jest.fn();
+const mockReplace = jest.fn();
 const mockProps = {
   navigation: {
     navigate: mockNavigate,
-    replace: jest.fn(),
+    replace: mockReplace,
   },
 } as any;
 
 describe("LoginScreen Component (Test 3)", () => {
-  beforeEach(async () => {
+  const mockLogin = jest.fn();
+
+  beforeEach(() => {
     jest.clearAllMocks();
-    await AsyncStorage.clear();
+    // Configuramos el mock para que cuando LoginScreen llame a useAuthStore(selector),
+    // reciba nuestra función mockLogin
+    (useAuthStore as unknown as jest.Mock).mockImplementation((selector) =>
+      selector({ login: mockLogin })
+    );
   });
 
   it("renderiza correctamente los elementos principales del login", () => {
@@ -53,12 +60,9 @@ describe("LoginScreen Component (Test 3)", () => {
     expect(passInput.props.value).toBe("123456");
   });
 
-  it("ejecuta el login con éxito si las credenciales coinciden con AsyncStorage", async () => {
-    // Simulamos que ya hay un usuario registrado guardado en el storage
-    await AsyncStorage.setItem(
-      "registered_user",
-      JSON.stringify({ username: "rafael", password: "123456" })
-    );
+  it("ejecuta el login con éxito si el store valida las credenciales", async () => {
+    // Simulamos que el store responde true al iniciar sesión
+    mockLogin.mockResolvedValueOnce(true);
 
     const onLoginSuccessMock = jest.fn();
     render(<LoginScreen {...mockProps} onLoginSuccess={onLoginSuccessMock} />);
@@ -67,9 +71,26 @@ describe("LoginScreen Component (Test 3)", () => {
     fireEvent.changeText(screen.getByTestId("password-input"), "123456");
     fireEvent.press(screen.getByTestId("login-button"));
 
-    // Esperamos a que se resuelva la promesa asíncrona de AsyncStorage y el login
     await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalledWith({
+        username: "rafael",
+        password: "123456",
+      });
       expect(onLoginSuccessMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("navega a MainTabs si el login tiene éxito y no se pasa onLoginSuccess", async () => {
+    mockLogin.mockResolvedValueOnce(true);
+
+    render(<LoginScreen {...mockProps} />);
+
+    fireEvent.changeText(screen.getByTestId("username-input"), "rafael");
+    fireEvent.changeText(screen.getByTestId("password-input"), "123456");
+    fireEvent.press(screen.getByTestId("login-button"));
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("MainTabs");
     });
   });
 });

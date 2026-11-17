@@ -1,42 +1,34 @@
-/**
- * Pantalla de registro de usuarios que valida las restricciones de formato 
- * (letras y longitud mínima) para el nombre de usuario y contraseña, 
- * guardando los datos de forma local usando AsyncStorage.
- */
-
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // o '@react-native-async-storage/async-storage'
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import { useAuthStore } from '../stores/authStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const register = useAuthStore((state) => state.register);
 
   const handleRegister = async () => {
-    // Validación de usuario: solo letras y mínimo 3 caracteres
     const lettersOnly = /^[A-Za-z]+$/;
     if (!username.trim() || username.length < 3 || !lettersOnly.test(username)) {
       Alert.alert('Error', 'El usuario debe tener al menos 3 caracteres y contener solo letras (sin números ni espacios).');
       return;
     }
 
-    // Validación de contraseña: mínimo 6 caracteres
     if (!password || password.length < 6) {
       Alert.alert('Error', 'La contraseña debe tener un mínimo de 6 caracteres.');
       return;
     }
 
-    try {
-      const userData = JSON.stringify({ username, password });
-      await AsyncStorage.setItem('registered_user', userData);
+    const success = await register({ username, password });
+    if (success) {
       Alert.alert('¡Éxito!', 'Usuario registrado correctamente.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') }
       ]);
-    } catch (error) {
+    } else {
       Alert.alert('Error', 'No se pudo guardar el registro.');
     }
   };

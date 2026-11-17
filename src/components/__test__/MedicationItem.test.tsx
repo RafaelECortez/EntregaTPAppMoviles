@@ -7,7 +7,8 @@
  */
 import React from "react";
 import { render, fireEvent, screen } from "@testing-library/react-native";
-import MedicationItem, { Medication } from "../MedicationItem";
+import MedicationItem from "../MedicationItem";
+import { Medication } from "../../stores/medicationStore";
 
 // Datos de prueba por defecto
 const mockMedication: Medication = {

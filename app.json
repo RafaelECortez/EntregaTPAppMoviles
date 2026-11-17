@@ -6,20 +6,68 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": false,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rafael.recordmedicapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Esta aplicación necesita acceso a la cámara para tomar fotos de los medicamentos.",
+        "NSPhotoLibraryUsageDescription": "Esta aplicación necesita acceso a tu galería para seleccionar imágenes de tus medicamentos.",
+        "NSLocationWhenInUseUsageDescription": "Esta aplicación necesita acceso a tu ubicación para registrar el consultorio de tu médico.",
+        "NSContactsUsageDescription": "Esta aplicación necesita acceso a tus contactos para asociar el teléfono de tu médico.",
+        "NSCalendarsUsageDescription": "Esta aplicación necesita acceso a tu calendario para agendar turnos médicos."
+      }
     },
     "android": {
+      "package": "com.rafael.recordmedicapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_CONTACTS",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Esta aplicación necesita acceso a tu galería para seleccionar imágenes de tus medicamentos.",
+          "cameraPermission": "Esta aplicación necesita acceso a la cámara para tomar fotos de los medicamentos."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Esta aplicación necesita acceso a tu ubicación para registrar el consultorio de tu médico."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Esta aplicación necesita acceso a tus contactos para asociar el teléfono de tu médico."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Esta aplicación necesita acceso a tu calendario para agendar turnos médicos."
+        }
+      ]
+    ]
   }
 }

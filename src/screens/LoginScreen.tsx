@@ -1,45 +1,34 @@
-/**
- * Pantalla de inicio de sesión que valida las credenciales ingresadas 
- * contra los datos almacenados localmente mediante AsyncStorage y gestiona 
- * la navegación hacia la pantalla principal o el registro.
- */
-
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
+import { useAuthStore } from '../stores/authStore';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'> & {
-  onLoginSuccess?: () => void; // Prop para facilitar testing sin romper el flujo real
+  onLoginSuccess?: () => void;
 };
 
 export default function LoginScreen({ navigation, onLoginSuccess }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const login = useAuthStore((state) => state.login);
 
   const handleLogin = async () => {
-    try {
-      const storedUser = await AsyncStorage.getItem('registered_user');
-      if (!storedUser) {
-        Alert.alert('Error', 'No hay ningún usuario registrado. Por favor, regístrate primero.');
-        return;
-      }
+    if (!username.trim() || !password) {
+      Alert.alert('Error', 'Por favor ingresa usuario y contraseña.');
+      return;
+    }
 
-      const { username: savedUser, password: savedPassword } = JSON.parse(storedUser);
+    const success = await login({ username, password });
 
-      if (username === savedUser && password === savedPassword) {
-        await AsyncStorage.setItem('is_logged_in', 'true');
-        if (onLoginSuccess) {
-          onLoginSuccess();
-        } else {
-          navigation.replace('Home'); // Navegar hacia Home
-        }
+    if (success) {
+      if (onLoginSuccess) {
+        onLoginSuccess();
       } else {
-        Alert.alert('Error', 'Usuario o contraseña incorrectos.');
+        navigation.replace('MainTabs');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Ocurrió un error al iniciar sesión.');
+    } else {
+      Alert.alert('Error', 'Usuario o contraseña incorrectos, o no hay cuentas registradas.');
     }
   };
 
@@ -73,7 +62,7 @@ export default function LoginScreen({ navigation, onLoginSuccess }: Props) {
 
       <TouchableOpacity 
         testID="register-link"
-        onPress={() => navigation.navigate('Register')} //Nagevar a la pantalla de Registro
+        onPress={() => navigation.navigate('Register')}
         style={styles.linkButton}
       >
         <Text style={styles.linkText}>¿No tienes cuenta? Regístrate aquí</Text>

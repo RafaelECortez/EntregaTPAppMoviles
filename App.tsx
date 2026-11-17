@@ -1,39 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import type { EventSubscription } from 'expo-modules-core';
+
+// ─── IMPORTACIÓN GRANULAR PARA ESCUCHAR CLICS EN NOTIFICACIONES ───────────────
+import { addNotificationResponseReceivedListener } from 'expo-notifications/build/NotificationsEmitter';
 
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
-import HomeScreen from './src/screens/HomeScreen';
-import AltaMedicationScreen from './src/screens/AltaMedicationScreen'; // <-- Verificar que este archivo exista y exporte por defecto
+import MainTabNavigator from './src/navigation/MainTabNavigator';
+import AltaMedicationScreen from './src/screens/AltaMedicationScreen';
 import { RootStackParamList } from './src/types/navigation';
+import { useAuthStore } from './src/stores/authStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Login');
+  const { isLoggedIn, isLoadingSession, checkSession } = useAuthStore();
+
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const responseListener = useRef<EventSubscription | null>(null);
 
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const isLoggedIn = await AsyncStorage.getItem('is_logged_in');
-        if (isLoggedIn === 'true') {
-          setInitialRoute('Home');
-        }
-      } catch (e) {
-        setInitialRoute('Login');
-      } finally {
-        setIsLoading(false);
+    checkSession();
+
+    responseListener.current = addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      console.log('[App] Notificación presionada con datos:', data);
+
+      if (navigationRef.current?.isReady()) {
+        navigationRef.current.navigate('MainTabs');
+      }
+    });
+
+    return () => {
+      if (responseListener.current) {
+        responseListener.current.remove();
       }
     };
-
-    checkSession();
   }, []);
 
-  if (isLoading) {
+  if (isLoadingSession) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color="#1976d2" />
@@ -42,40 +51,22 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="AltaMedication" component={AltaMedicationScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator 
+          initialRouteName={isLoggedIn ? 'MainTabs' : 'Login'} 
+          screenOptions={{ headerShown: false }}
+        >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+          <Stack.Screen name="AltaMedication" component={AltaMedicationScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }
 });
-
-/*
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
-
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-*/
